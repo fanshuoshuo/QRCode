@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7"/>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/CDH_other"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/hadoop_cdh5.2.1"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/hbase_cdh5.2.1"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/hive_cdh5.2.1"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/zokeeper_cdh5.2.1"/>
+	<classpathentry kind="lib" path="E:/code/Lib/Referenced Libraries/htrace-core-2.01.jar"/>
+	<classpathentry kind="lib" path="E:/code/Lib/Referenced Libraries/log4j-over-slf4j-1.7.1.jar"/>
+	<classpathentry kind="lib" path="E:/code/Lib/Referenced Libraries/logback-classic-1.0.7.jar"/>
+	<classpathentry kind="lib" path="E:/code/Lib/Referenced Libraries/logback-core-1.0.7.jar"/>
+	<classpathentry kind="lib" path="E:/code/Lib/Referenced Libraries/slf4j-api-1.7.5.jar"/>
+	<classpathentry kind="lib" path="E:/code/Lib/Referenced Libraries/slf4j-log4j12.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
