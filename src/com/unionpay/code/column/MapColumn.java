@@ -70,6 +70,7 @@ public enum MapColumn {
 	first_upmp_dt,
 	first_upop_dt,
 	pdate;
+	
 	public static void main(String args[]){
 		for(MapColumn item :MapColumn.values())
 //			System.out.println(item.name()+":"+item.ordinal());

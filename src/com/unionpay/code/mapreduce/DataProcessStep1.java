@@ -46,37 +46,43 @@ import com.unionpay.code.core.GroupingComparator;
 import com.unionpay.code.core.Constants;
 import com.unionpay.code.column.MapColumn;
 import com.unionpay.utils.StringUtils;
+import com.unionpay.utils.TimeUtils;
 /*
 
 import com.unionpay.nfc.core.Constants;
-import com.unionpay.utils.TimeUtils;
 */
 public class DataProcessStep1 {
 	
 	private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
 	private static Logger logger = LoggerFactory.getLogger(DataProcessStep1.class);
-	//Mapper
+	//
 	public static class DataProcessMapper extends Mapper<LongWritable, Text, KeyPair, Text>{
 	
 		private KeyPair key = new KeyPair();
 		private Text mapOutput = new Text();
+		private MapRuleManager mapRuleManager = null;
 		
-		public void setup(Context context) {
-			Configuration conf = context.getConfiguration();		
+		public void setup(Context context) {	
+			
+			Configuration conf = context.getConfiguration();
+	
+			mapRuleManager = new MapRuleManager();
+			
 			logger.info("map setup finished");
 		}
 		public void map(LongWritable rowKey, Text value, Context context) throws IOException, InterruptedException{
 			
-			String[] tokens =  value.toString().split(",");
+			//logger.info("row is :  "+ value.toString());
+			//logger.info("row is :  "+ value);
+			
+			String[] tokens = StringUtils.directSplit(value.toString());
 			MapItem tempRecord = new MapItem(tokens);
-				
-			CorrectStep1Tokens cToken=new CorrectStep1Tokens(tempRecord);
-			//Tfr_dt_dm check
+			
 			key.set(tempRecord.getAr_pri_acct_no(), tempRecord.getTfr_dt_dm());
 			mapOutput.set(tempRecord.toString());
 			
 			context.write(key, mapOutput);
-			
+		
 		}
 			
 	}
@@ -84,8 +90,7 @@ public class DataProcessStep1 {
 	public static class DataProcessReducer extends Reducer<KeyPair, Text, Text, Text> {
 		
 		 private Text reduceOutput = null;
-		// private StringBuilder strb = new StringBuilder();
-		 
+		//private StringBuilder strb = new StringBuilder();
 		 
 		 protected void setup(Context context) {
 				reduceOutput = new Text();
@@ -97,26 +102,22 @@ public class DataProcessStep1 {
 			 for (Text line : lines) {
 				// strb.delete(0, sb.length());
 				// String[] tokens = line.toString().split(",");
-				 //reduceOutput.set(line.toString());
+				//reduceOutput.set(line.toString());
 				 context.write(null, line);
 			 }
 			 
 		 }
-		 protected void cleanup(Context context) throws IOException, InterruptedException {
-			
+		 protected void cleanup(Context context) throws IOException, InterruptedException {	
 		 
 		 }
 	}
 	@SuppressWarnings({ "deprecation" })
 	
-	public void execute(Configuration conf, String inputPath, String outputPath) {
-		
-
+	public void execute(Configuration conf, String input_path, String output_path) {
 		try {
 			Job job = new Job(conf, this.getClass().getName());
 
 			job.setJarByClass(DataProcessStep1.class);
-
 			job.setPartitionerClass(FirstPartitioner.class);
 			job.setGroupingComparatorClass(GroupingComparator.class);
 
@@ -126,21 +127,38 @@ public class DataProcessStep1 {
 
 			job.setInputFormatClass(TextInputFormat.class);
 			job.setOutputFormatClass(TextOutputFormat.class);
+			
 			job.setMapOutputKeyClass(KeyPair.class);
-	
-			FileInputFormat.addInputPath(job,new Path(inputPath));
-				
-			FileOutputFormat.setOutputPath(job,new Path(outputPath));
- 
+			
+			String inputPath[] = input_path.split(",");
+			
+
+			FileSystem fs = FileSystem.get(conf);
+			Path itemPath = null;
+			for (String path : inputPath) {
+				itemPath = new Path(path);
+				if (fs.exists(itemPath)) {
+					FileInputFormat.addInputPath(job, itemPath);
+					logger.info("input path:\t" + path);
+				} else {
+					logger.info("input path:\t" + path + " does not exist!!!");
+				}
+
+			}
+			fs.close();
+			FileOutputFormat.setOutputPath(job, new Path(output_path + "_step1"));
+			
+			job.waitForCompletion(true);
+			
 		} catch (Exception e) {
 			logger.error("Exception", e);
 
 		}
 
 	}
-
-
+	
 	public static void main(String args[]) throws ParseException, IOException {
+		
 		Configuration conf = new Configuration();
 //		conf.set("mapred.min.split.size", "256000000");
 		conf.set("mapred.job.reuse.jvm.num.tasks", "-1");
@@ -149,17 +167,56 @@ public class DataProcessStep1 {
 		conf.set("mapreduce.output.fileoutputformat.compress.type", "BLOCK");
 		conf.set("mapred.min.split.size", "10240000000");
 		conf.set("mapreduce.output.fileoutputformat.compress.codec", "org.apache.hadoop.io.compress.GzipCodec");
-		
+		// 1.conf 参数校验
 		String[] actualArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
-
-		// 2.输入输出参数校验
-		if (actualArgs.length != 2) {
-			logger.info("args numbers must equal 2");
+		String upmpPath = conf.get("upmp.path", null);
+		if (upmpPath == null) {
+			logger.error("Please input  upmp.path !");
+			return;
+		} else {		
+			logger.info("upmp.path:\t" + upmpPath);		
+		}
 		
+		// 2.输入输出参数校验
+		if (actualArgs.length != 4) {
+			logger.info("args numbers must equal 4");
+			logger.info("usage:\n hadoop jar com.uninonpay.neuralnetwork.mapreduce.DataProcess \n"
+					//hadoop jar xx.jar
+					+ "-Dupmp.path=/user/hddtDmn/in_arsvc_upmp_his_trans_log/ \n"
+					+ "beginDate  endDate   destPath  upmp");
 			return;
 		}
+		Integer len=actualArgs.length;
+		logger.info("actualArgs.length "+ len.toString());
+	
+		// 3.输入输出参数赋值
+		Date beginDate = dateFormat.parse(actualArgs[0]);
+		Date endDate =  dateFormat.parse(actualArgs[1]);
+		
+		String destPath = actualArgs[2];
+		String tableName = actualArgs[3];
+		
+		logger.info("table name:\t" + tableName);
+		logger.info("begin date:\t" + actualArgs[0]);
+		logger.info("end date:\t" + actualArgs[1]);
+		logger.info("output path:\t" + destPath);
+		
+		
+		StringBuffer inputUpmpPath = new StringBuffer();
+	
+		Date tempBeginDate = beginDate;
+		
+		if (tableName.equals("upmp")) {
+			while (!tempBeginDate.after(endDate)) {
+				inputUpmpPath.append(upmpPath + dateFormat.format(tempBeginDate) + "_correct,");
+				tempBeginDate = TimeUtils.addDate(tempBeginDate, 1);
+			}
+		}
+
+	
+		//excute
 		DataProcessStep1 job = new DataProcessStep1();
-		job.execute(conf, actualArgs[0], actualArgs[1]);
+		job.execute(conf, inputUpmpPath.toString(), destPath);
 
 		System.exit(1);
 

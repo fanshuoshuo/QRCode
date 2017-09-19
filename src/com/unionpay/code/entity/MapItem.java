@@ -72,11 +72,7 @@ public class MapItem {
 	private String pdate;
 
 	public MapItem( String[] recordArray){
-		
-		
-		
-		
-		
+	
 		this.event_id=recordArray[MapColumn.event_id.ordinal()];
 		this.svc_req_tp=recordArray[MapColumn.svc_req_tp.ordinal()];
 		this.event_tp=recordArray[MapColumn.event_tp.ordinal()];
@@ -141,8 +137,6 @@ public class MapItem {
 		this.first_upop_dt=recordArray[MapColumn.first_upop_dt.ordinal()];
 		this.pdate=recordArray[MapColumn.pdate.ordinal()];
 
-
-
 	}
 
 	public String getEvent_id() {
@@ -157,8 +151,6 @@ public class MapItem {
 	public String getSvc_req_tp() {
 		return svc_req_tp;
 	}
-
-
 
 
 	public void setSvc_req_tp(String svc_req_tp) {

@@ -13,7 +13,7 @@ public class CorrectStep1Tokens {
 
 	public CorrectStep1Tokens(MapItem record) {
 		this.record=record;
-		updateRecord();
+		//updateRecord();
 	}
 	
 	public void updateRecord(){

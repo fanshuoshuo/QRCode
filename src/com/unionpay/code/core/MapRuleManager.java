@@ -30,11 +30,12 @@ public class MapRuleManager {
 	private static IPSeeker ipSeeker=null;
 	private String ip=null;
 
-
 	public MapRuleManager(IPSeeker ipSeeker){
 		this.ipSeeker=ipSeeker;
 	}
-
+	public MapRuleManager(){
+		
+	}
 	public boolean setTransStr(String[] tokens) {
 		this.tokens = tokens;
 		this.dataPkgMap=null;
