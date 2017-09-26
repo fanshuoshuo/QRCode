@@ -6,7 +6,7 @@
 package com.unionpay.code.column;
 public enum MapColumn {
 	
-	
+	//参照表建立
 	event_id,
 	svc_req_tp,
 	event_tp,
@@ -58,7 +58,7 @@ public enum MapColumn {
 	ip_city_region_cd,
 	tel_city_region_cd,
 	trans_dev_cd,
-	tfr_dt_dm,
+	tfr_dt_tm,
 	sys_tra_no,
 	longitude_latitude_prov_region_cd,
 	longitude_latitude_city_region_cd,
@@ -73,8 +73,8 @@ public enum MapColumn {
 	
 	public static void main(String args[]){
 		for(MapColumn item :MapColumn.values())
-//			System.out.println(item.name()+":"+item.ordinal());
-			System.out.println("this."+item.name()+"=recordArray[MapColumn."+item.name()+".ordinal()];");
+			System.out.println(item.name()+":"+item.ordinal());
+			//System.out.println("this."+item.name()+"=recordArray[MapColumn."+item.name()+".ordinal()];");
 			
 	}
 }

@@ -2,21 +2,26 @@
 /*
  * @author shuoshuofan
  * @date   20170911
- * function  somethin here 
+ * function  something  here 
  */
 
 package com.unionpay.code.mapreduce;
-//import java
+
+
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.Random;   
+
+import org.apache.commons.collections.map.StaticBucketMap;
 //import hadoop 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hive.ql.parse.HiveParser.ifExists_return;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
@@ -53,9 +58,10 @@ import com.unionpay.nfc.core.Constants;
 */
 public class DataProcessStep1 {
 	
+	
 	private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
 	private static Logger logger = LoggerFactory.getLogger(DataProcessStep1.class);
-	//
+	
 	public static class DataProcessMapper extends Mapper<LongWritable, Text, KeyPair, Text>{
 	
 		private KeyPair key = new KeyPair();
@@ -65,45 +71,84 @@ public class DataProcessStep1 {
 		public void setup(Context context) {	
 			
 			Configuration conf = context.getConfiguration();
-	
-			mapRuleManager = new MapRuleManager();
-			
+			mapRuleManager = new MapRuleManager();	
 			logger.info("map setup finished");
+			
 		}
 		public void map(LongWritable rowKey, Text value, Context context) throws IOException, InterruptedException{
-			
-			//logger.info("row is :  "+ value.toString());
-			//logger.info("row is :  "+ value);
-			
+				
 			String[] tokens = StringUtils.directSplit(value.toString());
-			MapItem tempRecord = new MapItem(tokens);
-			
-			key.set(tempRecord.getAr_pri_acct_no(), tempRecord.getTfr_dt_dm());
-			mapOutput.set(tempRecord.toString());
-			
+			//
+			MapItem record = new MapItem(tokens);	
+			//二维码交易打标签
+			if (Constants.QRGoodsTPSet.contains(record.getGoods_tp())){
+				key.set(record.getAr_pri_acct_no(), Constants.ACT_DEFAULT_DATE);//注意日期设置的是000000
+				mapOutput.set("true");	
+				context.write(key, mapOutput);
+			}
+			key.set(record.getAr_pri_acct_no(), record.getTfr_dt_tm());
+			mapOutput.set(record.toString());			
 			context.write(key, mapOutput);
-		
-		}
 			
+		}		
 	}
 	//Reducer
 	public static class DataProcessReducer extends Reducer<KeyPair, Text, Text, Text> {
 		
 		 private Text reduceOutput = null;
-		//private StringBuilder strb = new StringBuilder();
+		 private StringBuilder strb = new StringBuilder();
+		 boolean isQRCode=false;
 		 
 		 protected void setup(Context context) {
 				reduceOutput = new Text();
 		 }
-		 public void reduce(KeyPair key, Iterable<Text> lines, Context context)throws IOException, InterruptedException {
-			 
-			 //educeRuleManager ruleManger = new ReduceRuleManager();
-			 
+		 public void reduce(KeyPair key, Iterable<Text> lines, Context context)throws IOException, InterruptedException {	 		 
+			 ReduceRuleManager ruleManger = new ReduceRuleManager();
+			
 			 for (Text line : lines) {
-				// strb.delete(0, sb.length());
-				// String[] tokens = line.toString().split(",");
-				//reduceOutput.set(line.toString());
-				 context.write(null, line);
+				 
+			    strb.delete(0, strb.length());
+				String[] tokens = line.toString().split(",");
+				if(tokens.length==1) {
+					isQRCode=true;
+					continue;
+				}
+				
+				Integer len=tokens.length;
+				logger.error( "len is "+ len.toString()+" : "+ line.toString());
+				if(tokens.length<14){
+					logger.error( "len1 is "+ len.toString()+" : "+ line.toString());
+					continue;
+				}	
+				
+				if(isQRCode) {	
+					
+					ruleManger.setCurrentTrans(line.toString().split(","));
+					// 1.当笔交易变量   +当笔衍生变量
+					strb.append(ruleManger.getCurrentRecord().toString() + ",");	
+					//2  上笔交易变量
+					//当日上笔二维码
+				//	strb.append(ruleManger.getCurDayLastQRVar().toString() + ",");
+					
+					//当日上笔非二维码
+					//strb.append(ruleManger.getCurDayLastNotQRVar().toString() + ",");
+					//非当日上笔二维码
+					//strb.append(ruleManger.getNotCurDayLastQRVar().toString() + ",");
+					//非当日上笔非二维码交易
+					//strb.append(ruleManger.getNotCurDayLastNotQRVar().toString() + ",");	
+					strb.append("END");
+					reduceOutput.set(strb.toString());
+					context.write(null, reduceOutput);
+					/*
+					strb.append(line);	
+					strb.append("END");
+					reduceOutput.set(strb.toString());
+					context.write(null, reduceOutput);
+					*/				
+				}else {
+					break;
+				}
+			
 			 }
 			 
 		 }
@@ -120,11 +165,11 @@ public class DataProcessStep1 {
 			job.setJarByClass(DataProcessStep1.class);
 			job.setPartitionerClass(FirstPartitioner.class);
 			job.setGroupingComparatorClass(GroupingComparator.class);
-
+            //set mapper and reducer 
 			job.setMapperClass(DataProcessMapper.class);
 			job.setReducerClass(DataProcessReducer.class); // reducer class
 			job.setNumReduceTasks(Constants.NUM_REDUCE_TASKS); // 无Reduce
-
+ 
 			job.setInputFormatClass(TextInputFormat.class);
 			job.setOutputFormatClass(TextOutputFormat.class);
 			
@@ -132,12 +177,12 @@ public class DataProcessStep1 {
 			
 			String inputPath[] = input_path.split(",");
 			
-
 			FileSystem fs = FileSystem.get(conf);
 			Path itemPath = null;
 			for (String path : inputPath) {
 				itemPath = new Path(path);
 				if (fs.exists(itemPath)) {
+					//set input path 
 					FileInputFormat.addInputPath(job, itemPath);
 					logger.info("input path:\t" + path);
 				} else {
@@ -146,6 +191,8 @@ public class DataProcessStep1 {
 
 			}
 			fs.close();
+			//set output path 
+			
 			FileOutputFormat.setOutputPath(job, new Path(output_path + "_step1"));
 			
 			job.waitForCompletion(true);
@@ -156,17 +203,18 @@ public class DataProcessStep1 {
 		}
 
 	}
-	
 	public static void main(String args[]) throws ParseException, IOException {
 		
+		//conf
 		Configuration conf = new Configuration();
-//		conf.set("mapred.min.split.size", "256000000");
+		conf.set("mapred.min.split.size", "256000000");
 		conf.set("mapred.job.reuse.jvm.num.tasks", "-1");
 		conf.setBoolean("fs.hdfs.impl.disable.cache", true);
-		conf.set("mapreduce.output.fileoutputformat.compress", "true");
-		conf.set("mapreduce.output.fileoutputformat.compress.type", "BLOCK");
+		//conf.set("mapreduce.output.fileoutputformat.compress", "true");
+		//conf.set("mapreduce.output.fileoutputformat.compress.type", "BLOCK");
 		conf.set("mapred.min.split.size", "10240000000");
 		conf.set("mapreduce.output.fileoutputformat.compress.codec", "org.apache.hadoop.io.compress.GzipCodec");
+		
 		// 1.conf 参数校验
 		String[] actualArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
 		String upmpPath = conf.get("upmp.path", null);
@@ -176,32 +224,29 @@ public class DataProcessStep1 {
 		} else {		
 			logger.info("upmp.path:\t" + upmpPath);		
 		}
-		
 		// 2.输入输出参数校验
+		
 		if (actualArgs.length != 4) {
 			logger.info("args numbers must equal 4");
-			logger.info("usage:\n hadoop jar com.uninonpay.neuralnetwork.mapreduce.DataProcess \n"
-					//hadoop jar xx.jar
-					+ "-Dupmp.path=/user/hddtDmn/in_arsvc_upmp_his_trans_log/ \n"
-					+ "beginDate  endDate   destPath  upmp");
+			//run command ：    hadoop jar xx.jar
+			logger.info("usage:\n hadoop jar xx.jar  \n"			
+					+ "-Dupmp.path=/user/hddtmn/in_arsvc_upmp_his_trans_log/ \n"
+					+ "beginDate  endDate  outputPath  upmp");
 			return;
 		}
-		Integer len=actualArgs.length;
-		logger.info("actualArgs.length "+ len.toString());
-	
 		// 3.输入输出参数赋值
 		Date beginDate = dateFormat.parse(actualArgs[0]);
 		Date endDate =  dateFormat.parse(actualArgs[1]);
 		
-		String destPath = actualArgs[2];
+		String outputPath = actualArgs[2];
 		String tableName = actualArgs[3];
 		
 		logger.info("table name:\t" + tableName);
 		logger.info("begin date:\t" + actualArgs[0]);
 		logger.info("end date:\t" + actualArgs[1]);
-		logger.info("output path:\t" + destPath);
+		logger.info("output path:\t" + outputPath);
 		
-		
+		//4  遍历upmp下从开始日期到结束日期的文件
 		StringBuffer inputUpmpPath = new StringBuffer();
 	
 		Date tempBeginDate = beginDate;
@@ -212,11 +257,9 @@ public class DataProcessStep1 {
 				tempBeginDate = TimeUtils.addDate(tempBeginDate, 1);
 			}
 		}
-
-	
-		//excute
+		//excute 
 		DataProcessStep1 job = new DataProcessStep1();
-		job.execute(conf, inputUpmpPath.toString(), destPath);
+		job.execute(conf, inputUpmpPath.toString(), outputPath);
 
 		System.exit(1);
 

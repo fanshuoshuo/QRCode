@@ -16,9 +16,9 @@ import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 
-import com.unionpay.nfc.column.CompareColumn;
-import com.unionpay.nfc.core.Constants;
-import com.unionpay.nfc.entity.MapItem;
+//import com.unionpay.code.column.CompareColumn;
+import com.unionpay.code.core.Constants;
+import com.unionpay.code.entity.MapItem;
 
 /**
  * @author zhaojintao

@@ -9,6 +9,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.hbase.security.HBaseSaslRpcClient;
+
 public class Constants {
 	public static final String NULL_STRING_FLAG = "-1";
 	public static final String NULL_STRING_FLAG2 = "-2";
@@ -29,25 +31,26 @@ public class Constants {
 	public static final String FOREIGN_STRING="0000";
 	
 //	public static final String ACTIVE_TRANS_FLAG = "1005";
-
-	/**
-	 * 绑卡Flag集合，根据goodsTp取值
+	/*
+	 * 二维码交易类型集合 
+	 * 
 	 */
-	public final static Set<String> actGoodsTpSet = new HashSet<String>();
+	public final static Set<String> QRGoodsTPSet = new  HashSet<String>();
 	static {
-		actGoodsTpSet.add("1004");
-		actGoodsTpSet.add("1005");
-		actGoodsTpSet.add("1007");
-		actGoodsTpSet.add("1008");
-		actGoodsTpSet.add("1009");
-		actGoodsTpSet.add("1010");
-		actGoodsTpSet.add("1011");
-		actGoodsTpSet.add("1012");
-		actGoodsTpSet.add("1013");
-		actGoodsTpSet.add("1014");
-		
-		
+		QRGoodsTPSet.add("0135");
+		QRGoodsTPSet.add("0151");
+		QRGoodsTPSet.add("0140");
+		QRGoodsTPSet.add("0011");
+		QRGoodsTPSet.add("0012");
+		QRGoodsTPSet.add("0210");
+		QRGoodsTPSet.add("0211");
+		QRGoodsTPSet.add("0231");
+		QRGoodsTPSet.add("0220");
+		QRGoodsTPSet.add("0230");
+		QRGoodsTPSet.add("0212");
+	
 	}
+	
 	
 	/**
 	 * 互联网商户集合
@@ -70,9 +73,7 @@ public class Constants {
 		eventIdSet.add("20160624153420991811");
 		eventIdSet.add("20170309112721274740");
 		eventIdSet.add("20170111183835217359");
-		eventIdSet.add("20170224201037404899");
-
-		
+		eventIdSet.add("20170224201037404899");	
 	}
 	
 	/**
@@ -93,7 +94,6 @@ public class Constants {
 		
 	}
 	
-	
 	/**
 	 * 线下交易交易渠道集合
 	 */
@@ -107,6 +107,7 @@ public class Constants {
 	/**
 	 * 发卡机构映射
 	 */
+	
 	public final static Map<String, String> issInsIdCdMap = new HashMap<String, String>();
 	static {
 		issInsIdCdMap.put("6100", "0100");
